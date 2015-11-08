@@ -43,21 +43,25 @@ int MAINENTRY() {
   integer nvar = 0, ncon = 0;
   integer funit = 42, ierr = 0, fout = 6, io_buffer = 11, status;
   char *error;
+  void *libhs4, *libhs32;
 
   int i;
 
-  // First HS4
+  libhs4 = dlopen("libHS4.so", RTLD_LAZY | RTLD_LOCAL);
+  if (!libhs4) {
+    fprintf(stderr, "lib_handle = 0: %s\n", dlerror());
+    exit(1);
+  } else fputs("ok\n", stdout);
+  dlerror();
+
+  libhs32 = dlopen("libHS32.so", RTLD_LAZY | RTLD_LOCAL);
+  if (!libhs32) {
+    fprintf(stderr, "lib_handle = 0: %s\n", dlerror());
+    exit(1);
+  } else fputs("ok\n", stdout);
+
   {
-    lib_handle = dlopen("libHS4.so", RTLD_LAZY | RTLD_LOCAL);
-    if (!lib_handle) {
-      fprintf(stderr, "lib_handle = 0: %s\n", dlerror());
-      exit(1);
-    } else if ((error = dlerror()) != NULL) {
-      fprintf(stderr, "error != 0: %s\n", error);
-      exit(1);
-    } else {
-      fputs("ok\n", stdout);
-    }
+    lib_handle = libhs4;
     FORTRAN_open(&funit, fname, &ierr);
     CUTEST_cdimen(&status, &funit, &nvar, &ncon);
 
@@ -88,7 +92,6 @@ int MAINENTRY() {
 
     FORTRAN_close(&funit, &ierr);
     CUTEST_uterminate(&status);
-    dlclose(lib_handle);
     if ((error = dlerror()) != NULL) {
       fprintf(stderr, "error != 0: %s\n", error);
       exit(1);
@@ -97,16 +100,7 @@ int MAINENTRY() {
 
   // Second HS32
   {
-    lib_handle = dlopen("libHS32.so", RTLD_LAZY | RTLD_LOCAL);
-    if (!lib_handle) {
-      fprintf(stderr, "lib_handle = 0: %s\n", dlerror());
-      exit(1);
-    } else if ((error = dlerror()) != NULL) {
-      fprintf(stderr, "error != 0: %s\n", error);
-      exit(1);
-    } else {
-      fputs("ok\n", stdout);
-    }
+    lib_handle = libhs32;
     strcpy(fname, "OUTSDIFHS32.d");
     FORTRAN_open(&funit, fname, &ierr);
     CUTEST_cdimen(&status, &funit, &nvar, &ncon);
@@ -153,8 +147,10 @@ int MAINENTRY() {
 
     FORTRAN_close(&funit, &ierr);
     CUTEST_cterminate(&status);
-    dlclose(lib_handle);
   }
+
+  dlclose(libhs4);
+  dlclose(libhs32);
 
   return 0;
 }
